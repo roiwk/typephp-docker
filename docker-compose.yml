@@ -1,0 +1,16 @@
+services:
+  typephp:
+    image: ${TYPEPHP_IMAGE:-typephp:8.4}
+    pull_policy: ${TYPEPHP_PULL:-missing}
+    working_dir: /src
+    volumes:
+      - ${SRC:-.}:/src
+    environment:
+      PHP_HOME: /opt/php
+      PHPX_HOME: /opt/phpx
+      # shared | static | php-builder
+      TYPEPHP_LINK: ${TYPEPHP_LINK:-shared}
+      TYPEPHP_JOBS: ${TYPEPHP_JOBS:-2}
+      TYPEPHP_ZTS: ${TYPEPHP_ZTS:-on}
+      TYPEPHP_SAPI: ${TYPEPHP_SAPI:-embed}
+      TYPEPHP_EXTENSIONS: ${TYPEPHP_EXTENSIONS:-}
