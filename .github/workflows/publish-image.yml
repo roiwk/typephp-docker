@@ -1,5 +1,9 @@
 name: Publish image
 
+concurrency:
+  group: publish-image
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   push:

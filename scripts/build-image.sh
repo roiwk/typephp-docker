@@ -34,12 +34,19 @@ case "$(uname -m)" in
         ;;
 esac
 
-ver="${TYPEPHP_VERSION#v}"
-php_minor="${PHP_VERSION%.*}"
-tags=(-t "typephp:${ver}" -t "typephp:${php_minor}")
+# shellcheck source=image-tags.sh
+source "${root}/scripts/image-tags.sh"
+suffixes=()
+tags=()
+while IFS= read -r suffix; do
+    suffixes+=("${suffix}")
+    tags+=(-t "typephp:${suffix}")
+done < <(typephp_tag_suffixes)
 if [[ -n "${IMAGE:-}" ]]; then
     image="$(printf '%s' "${IMAGE}" | tr '[:upper:]' '[:lower:]')"
-    tags+=(-t "${image}:${ver}" -t "${image}:${php_minor}" -t "${image}:${ver}-php${PHP_VERSION}")
+    for suffix in "${suffixes[@]}"; do
+        tags+=(-t "${image}:${suffix}")
+    done
 fi
 
 docker build \
@@ -58,10 +65,10 @@ docker build \
 
 if [[ "${PUSH:-}" == 1 ]]; then
     if [[ -z "${IMAGE:-}" ]]; then
-        echo "PUSH=1 requires IMAGE, for example ghcr.io/<owner>/typephp" >&2
+        echo "PUSH=1 requires IMAGE, for example ghcr.io/roiwk/typephp-docker" >&2
         exit 1
     fi
-    docker push "${image}:${ver}"
-    docker push "${image}:${php_minor}"
-    docker push "${image}:${ver}-php${PHP_VERSION}"
+    for suffix in "${suffixes[@]}"; do
+        docker push "${image}:${suffix}"
+    done
 fi

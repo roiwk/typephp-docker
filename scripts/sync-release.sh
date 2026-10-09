@@ -8,19 +8,23 @@ requested="${1:-latest}"
 php_minor="${TYPEPHP_PHP_MINOR:-8.4}"
 
 python3 - "${root}" "${requested}" "${php_minor}" << 'PY'
-import hashlib, json, sys, urllib.request
+import hashlib, json, os, sys, urllib.request
 from pathlib import Path
 
 root, requested, php_minor = sys.argv[1:]
+token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+
+def api_headers():
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "typephp-docker",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 def get(url):
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "typephp-docker",
-        },
-    )
+    req = urllib.request.Request(url, headers=api_headers())
     with urllib.request.urlopen(req, timeout=120) as response:
         return json.load(response)
 
@@ -42,6 +46,25 @@ else:
 
 version = release["tag_name"]
 published = release["published_at"]
+if php_minor == "auto":
+    minors = set()
+    prefix = f"tpc_{version}_linux_"
+    for asset in release["assets"]:
+        name = asset["name"]
+        if not name.startswith(prefix) or "_php" not in name or not name.endswith("-zts.tar.gz"):
+            continue
+        platform = name[len(prefix):].split("_php", 1)[0]
+        if platform not in ("x64", "arm64"):
+            continue
+        patch = name.split("_php", 1)[1].split("-zts.tar.gz", 1)[0]
+        parts = patch.split(".")
+        if len(parts) >= 2 and all(part.isdigit() for part in parts[:2]):
+            minors.add(".".join(parts[:2]))
+    if not minors:
+        raise SystemExit(f"no linux tpc assets on {version}")
+    php_minor = sorted(minors, key=lambda item: [int(part) for part in item.split(".")])[-1]
+    print(f"selected PHP minor {php_minor}", file=sys.stderr)
+
 checksums = {}
 php_version = None
 for asset in release["assets"]:

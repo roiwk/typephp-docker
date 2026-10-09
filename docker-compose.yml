@@ -1,6 +1,6 @@
 services:
   typephp:
-    image: ${TYPEPHP_IMAGE:-typephp:8.4}
+    image: ${TYPEPHP_IMAGE:-ghcr.io/roiwk/typephp-docker:0.9.4}
     pull_policy: ${TYPEPHP_PULL:-missing}
     working_dir: /src
     volumes:
