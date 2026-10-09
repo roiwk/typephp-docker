@@ -4,10 +4,14 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+preset_image="${IMAGE-}"
 # shellcheck disable=SC1091
 set -a
 source "${root}/versions.env"
 set +a
+if [[ -n "${preset_image}" ]]; then
+    IMAGE="${preset_image}"
+fi
 
 image="${1:-${IMAGE:-}}"
 if [[ -z "${image}" ]]; then

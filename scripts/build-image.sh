@@ -4,10 +4,20 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${root}"
+# versions.env may set IMAGE= (empty). Keep a name passed by the caller,
+# such as IMAGE from GitHub Actions.
+preset_image="${IMAGE-}"
+preset_jobs="${MAKE_JOBS-}"
 # shellcheck disable=SC1091
 set -a
 source "${root}/versions.env"
 set +a
+if [[ -n "${preset_image}" ]]; then
+    IMAGE="${preset_image}"
+fi
+if [[ -n "${preset_jobs}" ]]; then
+    MAKE_JOBS="${preset_jobs}"
+fi
 
 case "$(uname -m)" in
     x86_64)
