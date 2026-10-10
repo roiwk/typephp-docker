@@ -104,14 +104,18 @@ RUN apt-get update \
         /tmp/scripts/install-static-sdk.sh \
     && rm -rf /tmp/scripts
 
-COPY scripts/tpc-static.sh scripts/tpc-private.sh scripts/entrypoint.sh /tmp/scripts/
+COPY scripts/tpc-static.sh scripts/tpc-private.sh scripts/entrypoint.sh scripts/enable-extensions.sh scripts/extension-mode.sh scripts/chown-output.sh /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh \
     && install -m 0755 /tmp/scripts/tpc-static.sh /usr/local/bin/tpc-static \
     && install -m 0755 /tmp/scripts/tpc-private.sh /usr/local/bin/tpc-private \
     && install -m 0755 /tmp/scripts/entrypoint.sh /usr/local/bin/typephp-entrypoint \
+    && install -m 0755 /tmp/scripts/enable-extensions.sh /usr/local/bin/typephp-ext \
+    && install -m 0755 /tmp/scripts/chown-output.sh /usr/local/bin/typephp-chown-output \
+    && install -m 0644 /tmp/scripts/extension-mode.sh /usr/local/bin/typephp-ext-mode.sh \
     && rm -rf /tmp/scripts
 
 WORKDIR /src
 ENV TYPEPHP_LINK=shared
+ENV TYPEPHP_ZTS=off
 ENTRYPOINT ["/usr/local/bin/typephp-entrypoint"]
 CMD ["tpc", "--version"]

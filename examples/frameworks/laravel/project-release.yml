@@ -1,0 +1,12 @@
+# 发布包。改 include 为 project-cli.yml 时，嵌同一份 vendor，产物是 artisan 程序。
+include: project.yml
+optimize: 2
+embedded-files:
+  - typephp-fpm.php
+  - vendor
+  - app
+  - bootstrap
+  - config
+  - routes
+  - public
+  - resources

@@ -1,0 +1,11 @@
+# artisan 发布包。include 的是 project-cli.yml，产物是 build/laravel。
+include: project-cli.yml
+optimize: 2
+embedded-files:
+  - vendor
+  - app
+  - bootstrap
+  - config
+  - routes
+  - public
+  - resources

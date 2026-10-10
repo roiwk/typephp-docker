@@ -1,0 +1,42 @@
+# Laravel 网页。拷到项目根目录后编译。
+# public/index.php 仍是 FPM 的请求脚本，不要写成 entry。
+# 官方骨架没有 app/Domain、app/Support。app/Models、app/Providers 继承 Illuminate，
+# 父类不在 sources 里，所以留在 Composer，不放进 AOT。
+name: laravel
+mode: bin
+php-version: "8.4"
+sapi: fpm
+job: 2
+optimize: 0
+# CLI 和 FPM 各用一份对象缓存，避免互相覆盖。
+build-dir: build/fpm
+output: build/laravel-fpm
+
+# FPM 没有 CLI entry。至少嵌入一个 PHP，链接才会带上 opcode_unserialize。
+embedded-files:
+  - typephp-fpm.php
+
+php-builder:
+  extensions: [pdo_mysql, redis]
+  zts: off
+
+sources:
+  - app
+
+ignore:
+  - tests
+  - storage
+  - bootstrap/cache
+  - app/Models
+  - app/Providers
+
+ext-deps:
+  - pdo_mysql
+  - mbstring
+  - openssl
+  - tokenizer
+  - xml
+  - ctype
+  - fileinfo
+  - curl
+  - bcmath

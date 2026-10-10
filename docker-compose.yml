@@ -5,12 +5,19 @@ services:
     working_dir: /src
     volumes:
       - ${SRC:-.}:/src
+      - typephp-ext:/var/cache/typephp-ext
+      - typephp-php:/root/.typephp
     environment:
       PHP_HOME: /opt/php
       PHPX_HOME: /opt/phpx
       # shared | static | php-builder
       TYPEPHP_LINK: ${TYPEPHP_LINK:-shared}
       TYPEPHP_JOBS: ${TYPEPHP_JOBS:-2}
-      TYPEPHP_ZTS: ${TYPEPHP_ZTS:-on}
+      TYPEPHP_ZTS: ${TYPEPHP_ZTS:-off}
       TYPEPHP_SAPI: ${TYPEPHP_SAPI:-embed}
-      TYPEPHP_EXTENSIONS: ${TYPEPHP_EXTENSIONS:-}
+      # Unset stays __omit__ so static keeps the full-static SDK.
+      # TYPEPHP_EXTENSIONS= or TYPEPHP_EXTENSIONS=none builds a base PHP.
+      TYPEPHP_EXTENSIONS: ${TYPEPHP_EXTENSIONS-__omit__}
+volumes:
+  typephp-ext:
+  typephp-php:

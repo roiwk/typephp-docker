@@ -1,0 +1,10 @@
+# artisan。entry 由 CLI SAPI 用 Zend 执行，可以保留脚本顶层代码。
+# tpc 0.9.4 只接受可执行的 *.php。artisan 没有这个后缀，所以入口是 artisan.php，再交给原来的 artisan。
+include: project.yml
+name: laravel
+sapi: cli
+entry: artisan.php
+build-dir: build/cli
+output: build/laravel
+# 覆盖 project.yml 里给 FPM 准备的 embedded-files。CLI 的 entry 自己会带上 opcode loader。
+embedded-files: []

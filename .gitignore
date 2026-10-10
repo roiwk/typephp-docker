@@ -1,0 +1,20 @@
+# 框架由 Composer 安装的依赖。源码、composer.json、composer.lock 仍纳入版本库。
+tests/frameworks/*/vendor/
+
+# 本地密钥与运行时生成物。runtime、web/assets 里的占位 .gitignore 由各框架自己的规则保留。
+tests/frameworks/*/.env
+tests/frameworks/*/.env.backup
+tests/frameworks/*/.env.production
+tests/frameworks/*/database/*.sqlite
+tests/frameworks/*/database/*.sqlite-journal
+tests/frameworks/*/*.log
+tests/frameworks/*/node_modules/
+tests/frameworks/*/build/
+tests/frameworks/*/project.compile.yml
+tests/frameworks/*/project.yml
+tests/frameworks/*/project-cli.yml
+tests/frameworks/*/project-release.yml
+tests/frameworks/*/project-cli-release.yml
+tests/frameworks/*/project-ext.yml
+tests/frameworks/*/typephp-fpm.php
+tests/frameworks/*/php-fpm.conf

@@ -1,0 +1,10 @@
+include: project.yml
+optimize: 2
+embedded-files:
+  - vendor
+  - app
+  - config
+  - process
+  - support
+  - public
+  - resource

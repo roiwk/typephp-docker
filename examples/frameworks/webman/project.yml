@@ -1,0 +1,30 @@
+# Webman。start.php 含顶层代码，必须作为 CLI entry，编译器会把它排除出 AOT。
+# config、support 留在磁盘或发布配置的 embedded-files 里，不要放进 sources。
+# 官方模板的进程类在 app/process，并且继承 Workerman，继续走 Composer。
+name: webman
+mode: bin
+php-version: "8.4"
+sapi: cli
+entry: start.php
+job: 2
+optimize: 0
+build-dir: build
+output: build/webman
+
+php-builder:
+  extensions: [pcntl, posix, redis]
+  zts: off
+
+sources:
+  - app
+
+ignore:
+  - runtime
+  - tests
+  - app/middleware
+  - app/model
+  - app/process
+
+ext-deps:
+  - pcntl
+  - posix
