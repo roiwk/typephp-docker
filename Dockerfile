@@ -70,6 +70,14 @@ ARG TPC_SHA256=
 ARG PHPX_SDK_VERSION=v2.9.3
 ARG PHPX_SDK_PHP=8.4.25
 ARG PHPX_SDK_SHA256=9fb69fe3e941edbae497d09bbcb09708b717320a7d5d81871ef28b56839f0285
+ARG TYPEPHP_SOURCE_SHA256=e085e197ce6505a15b310291f3f1347dfac11f60b977cfd7c56861e1879f2502
+ARG PHPX_WASI_SDK_VERSION=v2.9.3
+ARG PHPX_WASI_SDK_PHP=8.5.9
+ARG PHPX_WASI_SDK_SHA256=31526c077fb512896546c85026eef01aa0aced36d651f64513f5235b6648249d
+ARG WASI_SDK_VERSION=33.0
+ARG WASI_SDK_SHA256=
+ARG WASMTIME_VERSION=v49.0.2
+ARG WASMTIME_SHA256=
 
 COPY scripts/install-tpc.sh scripts/smoke-test.sh /tmp/scripts/
 RUN chmod +x /tmp/scripts/install-tpc.sh /tmp/scripts/smoke-test.sh \
@@ -104,6 +112,52 @@ RUN apt-get update \
         /tmp/scripts/install-static-sdk.sh \
     && rm -rf /tmp/scripts
 
+COPY scripts/install-wasm.sh /tmp/scripts/install-wasm.sh
+RUN chmod +x /tmp/scripts/install-wasm.sh \
+    && TYPEPHP_VERSION="${TYPEPHP_VERSION}" \
+        TYPEPHP_SOURCE_SHA256="${TYPEPHP_SOURCE_SHA256}" \
+        PHPX_WASI_SDK_VERSION="${PHPX_WASI_SDK_VERSION}" \
+        PHPX_WASI_SDK_PHP="${PHPX_WASI_SDK_PHP}" \
+        PHPX_WASI_SDK_SHA256="${PHPX_WASI_SDK_SHA256}" \
+        WASI_SDK_VERSION="${WASI_SDK_VERSION}" \
+        WASI_SDK_SHA256="${WASI_SDK_SHA256}" \
+        WASMTIME_VERSION="${WASMTIME_VERSION}" \
+        WASMTIME_SHA256="${WASMTIME_SHA256}" \
+        /tmp/scripts/install-wasm.sh \
+    && rm -rf /tmp/scripts
+
+ARG PHP_NANO_VERSION=v1.1.0
+ARG PHP_NANO_SHA256=f9d59c03b0cf6d1121ff3fe699fd00d7357b28df8f2ae9633a0448c7f1d2c064
+
+COPY scripts/install-nano.sh /tmp/scripts/install-nano.sh
+RUN chmod +x /tmp/scripts/install-nano.sh \
+    && PHP_NANO_VERSION="${PHP_NANO_VERSION}" \
+        PHP_NANO_SHA256="${PHP_NANO_SHA256}" \
+        /tmp/scripts/install-nano.sh \
+    && rm -rf /tmp/scripts
+
+ARG PHPX_ANDROID_SDK_SHA256=c7d142c151fd14fd8f652487f1404deffe94c08a9ab9cbb3e2bfd47f81b79f88
+ARG ANDROID_NDK_VERSION=r27d
+ARG ANDROID_NDK_SHA256=601246087a682d1944e1e16dd85bc6e49560fe8b6d61255be2829178c8ed15d9
+ARG ANDROID_CMDLINE_TOOLS_SHA256=7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openjdk-21-jdk-headless zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/install-android.sh /tmp/scripts/install-android.sh
+RUN --mount=type=cache,target=/var/cache/typephp-android \
+    --mount=type=bind,from=androidcache,source=/,target=/tmp/android-host-cache,ro \
+    chmod +x /tmp/scripts/install-android.sh \
+    && PHPX_ANDROID_SDK_SHA256="${PHPX_ANDROID_SDK_SHA256}" \
+        ANDROID_NDK_VERSION="${ANDROID_NDK_VERSION}" \
+        ANDROID_NDK_SHA256="${ANDROID_NDK_SHA256}" \
+        ANDROID_CMDLINE_TOOLS_SHA256="${ANDROID_CMDLINE_TOOLS_SHA256}" \
+        ANDROID_DOWNLOAD_CACHE=/var/cache/typephp-android \
+        ANDROID_HOST_CACHE=/tmp/android-host-cache \
+        /tmp/scripts/install-android.sh \
+    && rm -rf /tmp/scripts
+
 COPY scripts/tpc-static.sh scripts/tpc-private.sh scripts/entrypoint.sh scripts/enable-extensions.sh scripts/extension-mode.sh scripts/chown-output.sh /tmp/scripts/
 RUN chmod +x /tmp/scripts/*.sh \
     && install -m 0755 /tmp/scripts/tpc-static.sh /usr/local/bin/tpc-static \
@@ -115,7 +169,11 @@ RUN chmod +x /tmp/scripts/*.sh \
     && rm -rf /tmp/scripts
 
 WORKDIR /src
-ENV TYPEPHP_LINK=shared
-ENV TYPEPHP_ZTS=off
+ENV TYPEPHP_LINK=shared \
+    TYPEPHP_ZTS=off \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    ANDROID_NDK_HOME=/opt/android-ndk \
+    PHPX_ANDROID_SDK_DIR=/opt/phpx/android/arm64-v8a \
+    PATH="/opt/android-sdk/platform-tools:/opt/android-sdk/build-tools/latest:/opt/android-sdk/cmdline-tools/latest/bin:/opt/wasi-sdk/bin:/opt/php/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ENTRYPOINT ["/usr/local/bin/typephp-entrypoint"]
 CMD ["tpc", "--version"]

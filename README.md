@@ -51,6 +51,9 @@ docker compose run --rm typephp tpc hello.php
 - 官方自举编译器 `tpc`（`tpc_v0.9.4_linux_*_php8.4.26-zts`）
 - GCC、Clang、CMake 3.24+、Composer 2、GMP、MPFR、Python 3
 - PHPX full-static SDK（`/opt/phpx/full-static/sdk`）。动态链接用镜像 PHP 8.4.26；SDK 里的 `libphp.a` 是 PHP **8.4.25**
+- `tpc --wasm` 用的 WASI SDK 33（Clang 22）、wasmtime，以及 PHPX `wasm32-wasip2` 运行库（PHP 8.5.9，和宿主机 PHP 不是同一份）
+- `tpc --nano` 用的 `swoole/php-nano` v1.1.0（`/usr/local/php-nano`）和同一份 PHPX 源码（`/usr/local/phpx`）。产物不链接 `libphp`，也没有 Zend VM
+- Android `arm64-v8a`（`aarch64-linux-android24`）用的 NDK r27d、Android SDK Platform 36、Build Tools 36.0.0，以及 PHPX Android SDK（`/opt/phpx/android/arm64-v8a`，PHP 8.4.25）
 
 `PHP_HOME`、`PHPX_HOME` 已写入环境变量。`libphp.so` 与 `libphpx.so` 已加入动态链接器路径。工作目录是 `/src`。
 
@@ -141,6 +144,7 @@ docker run --rm \
 | `scripts/compile.sh static hello.php`                          | 完全静态 SDK，单个 ELF，宿主机可直接运行。此时不要设置 `TYPEPHP_EXTENSIONS` |
 | `TYPEPHP_EXTENSIONS=redis scripts/compile.sh static hello.php` | 静态，redis 编进私有 PHP，`zts` 默认 off                       |
 | `scripts/compile.sh php-builder hello.php`                     | 私有 PHP，`zts` 默认 off                                  |
+| `scripts/compile.sh nano hello.php`                            | 不链接 `libphp`，编译 PHP Nano 源码                          |
 | `scripts/compile.sh laravel-cli /path/to/laravel`              | `build/laravel`，按 YAML 的 php-builder                 |
 | `scripts/compile.sh laravel-fpm /path/to/laravel`              | `build/laravel-fpm`                                  |
 | `scripts/compile.sh laravel-release /path/to/laravel`          | FPM 发布包，`build/laravel-fpm`                            |
@@ -163,7 +167,24 @@ scripts/compile.sh webman /path/to/webman && /path/to/webman/build/webman start
 
 ### 环境变量
 
-命令行里已经写了的 `--php-builder`、`--php-version`、`--sapi`、`--full-static`、`--compiler`、`-j`、`--job` 保持原样，同名环境变量只补上没写的那些。
+命令行里已经写了的 `--php-builder`、`--php-version`、`--sapi`、`--full-static`、`--compiler`、`-j`、`--job` 保持原样，同名环境变量只补上没写的那些。`tpc --wasm hello.php` 和 `tpc --nano hello.php` 不追加这些参数，`TYPEPHP_LINK` 和 `TYPEPHP_EXTENSIONS` 也不参与。`--wasm` 只接受一个 PHP 文件或 `project.yml`，可以再加 `--build-dir`。镜像里带有 WASI SDK 33（Clang 22）和 PHPX 的 `wasm32-wasip2` 运行库，编出来的是 WASI 0.2 组件。预编译的 PHP 静态库引用 `wasi:http@0.2.8`，镜像里的 wasmtime 49 只实现 `0.2.12`，所以组件能编出来，`wasmtime` 还不能执行。浏览器模式还要自行安装 `jco`。
+
+`tpc --nano hello.php` 把 PHP Nano、PHPX 和生成的 C++ 编成一个程序，不链接 `libphp`，也不能在运行时解释 PHP。入口是 `function main(int $argc, array $argv): void`。`eval`、`include`、匿名类、Fiber 和网络接口会在编译期报错。第一次要编译 Nano 的 C 源码，中间文件在 `build/`。`tpc --nano --wasm hello.php` 走同一套源码，不使用预编译的 WASI `libphp.a`。
+
+### Android、iOS、macOS
+
+Android 目标是 `aarch64-linux-android24`（`arm64-v8a`）。镜像里已经设置 `ANDROID_SDK_ROOT`、`ANDROID_NDK_HOME` 和 `PHPX_ANDROID_SDK_DIR`。`TYPEPHP_LINK=static` 遇到这个目标或 iOS 目标时，不会再追加 `--full-static` 或 `--compiler`。
+
+```bash
+docker run --rm -v "$PWD":/src -w /src typephp:latest \
+  tpc hello.php --target-platform aarch64-linux-android24 -m lib -o hello.so
+```
+
+PHP 文件要写在参数前面。`tpc` 会把第一个非选项参数当成输入，写在 `--target-platform` 后面的三元组会被当成源码路径。也可以用 `scripts/compile.sh android [项目目录] [hello.php]`。
+
+编 APK 时用项目里的 `build-app.sh`。它需要 Platform 36、Build Tools、`javac`、`keytool` 和 NDK，这些都在镜像里。`adb` 也在 `PATH` 里，真机或模拟器连上宿主机后可以安装。
+
+iOS 目标（`arm64-apple-ios15.0`）和 macOS AppKit 应用要在装了完整 Xcode 的 Mac 上编译。`tpc` 在 Linux 上会拒绝 iOS 目标。真机包还要 Apple 签名证书和 Provisioning Profile。官方 NDK r27d 的 Linux 包是 x86_64 宿主机工具链，arm64 镜像不带这份 NDK。
 
 
 | 变量                   | 默认                                   | 作用                                                                                                                                                                                 |

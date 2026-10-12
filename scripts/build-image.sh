@@ -23,10 +23,14 @@ case "$(uname -m)" in
     x86_64)
         tpc_sha="${TPC_SHA256_X64}"
         sdk_sha="${PHPX_SDK_SHA256_X64}"
+        wasi_sha="${WASI_SDK_SHA256_X64}"
+        wasmtime_sha="${WASMTIME_SHA256_X64}"
         ;;
     aarch64|arm64)
         tpc_sha="${TPC_SHA256_ARM64}"
         sdk_sha="${PHPX_SDK_SHA256_ARM64}"
+        wasi_sha="${WASI_SDK_SHA256_ARM64}"
+        wasmtime_sha="${WASMTIME_SHA256_ARM64}"
         ;;
     *)
         echo "unsupported architecture: $(uname -m)" >&2
@@ -49,7 +53,16 @@ if [[ -n "${IMAGE:-}" ]]; then
     done
 fi
 
+android_cache="${TYPEPHP_ANDROID_CACHE:-}"
+if [[ -z "${android_cache}" && -d /tmp/android-dl ]]; then
+    android_cache=/tmp/android-dl
+fi
+if [[ -z "${android_cache}" ]]; then
+    android_cache="$(mktemp -d)"
+fi
+
 docker build \
+    --build-context "androidcache=${android_cache}" \
     --build-arg "PHP_VERSION=${PHP_VERSION}" \
     --build-arg "PHP_SHA256=${PHP_SHA256}" \
     --build-arg "TYPEPHP_VERSION=${TYPEPHP_VERSION}" \
@@ -60,6 +73,20 @@ docker build \
     --build-arg "PHPX_SDK_VERSION=${PHPX_SDK_VERSION}" \
     --build-arg "PHPX_SDK_PHP=${PHPX_SDK_PHP}" \
     --build-arg "PHPX_SDK_SHA256=${sdk_sha}" \
+    --build-arg "TYPEPHP_SOURCE_SHA256=${TYPEPHP_SOURCE_SHA256}" \
+    --build-arg "PHPX_WASI_SDK_VERSION=${PHPX_WASI_SDK_VERSION}" \
+    --build-arg "PHPX_WASI_SDK_PHP=${PHPX_WASI_SDK_PHP}" \
+    --build-arg "PHPX_WASI_SDK_SHA256=${PHPX_WASI_SDK_SHA256}" \
+    --build-arg "WASI_SDK_VERSION=${WASI_SDK_VERSION}" \
+    --build-arg "WASI_SDK_SHA256=${wasi_sha}" \
+    --build-arg "WASMTIME_VERSION=${WASMTIME_VERSION}" \
+    --build-arg "WASMTIME_SHA256=${wasmtime_sha}" \
+    --build-arg "PHP_NANO_VERSION=${PHP_NANO_VERSION}" \
+    --build-arg "PHP_NANO_SHA256=${PHP_NANO_SHA256}" \
+    --build-arg "PHPX_ANDROID_SDK_SHA256=${PHPX_ANDROID_SDK_SHA256}" \
+    --build-arg "ANDROID_NDK_VERSION=${ANDROID_NDK_VERSION}" \
+    --build-arg "ANDROID_NDK_SHA256=${ANDROID_NDK_SHA256}" \
+    --build-arg "ANDROID_CMDLINE_TOOLS_SHA256=${ANDROID_CMDLINE_TOOLS_SHA256}" \
     "${tags[@]}" \
     .
 

@@ -8,6 +8,39 @@ set -euo pipefail
 # shellcheck source=/usr/local/bin/typephp-ext-mode.sh
 source /usr/local/bin/typephp-ext-mode.sh
 
+has_flag() {
+    local name="$1"
+    shift
+    local arg
+    for arg in "$@"; do
+        if [[ "${arg}" == "${name}" || "${arg}" == "${name}="* ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+if typephp_requests_wasm "$@"; then
+    status=0
+    tpc "$@" || status=$?
+    /usr/local/bin/typephp-chown-output . || true
+    exit "${status}"
+fi
+
+# Nano compiles its own C/C++ runtime. --full-static and --compiler do not apply.
+# This has to run before the extension redirect, which would otherwise describe
+# a private PHP build that --nano never performs.
+if typephp_requests_nano "$@" || typephp_requests_mobile "$@"; then
+    status=0
+    cmd=(tpc "$@")
+    if [[ -n "${TYPEPHP_JOBS:-}" ]] && ! has_flag --job "$@" && ! has_flag -j "$@"; then
+        cmd+=(--job="${TYPEPHP_JOBS}")
+    fi
+    "${cmd[@]}" || status=$?
+    /usr/local/bin/typephp-chown-output . || true
+    exit "${status}"
+fi
+
 extension_selection="$(typephp_extension_selection)"
 if [[ "${extension_selection}" != omit ]]; then
     if [[ "${extension_selection}" == minimal ]]; then
@@ -30,18 +63,6 @@ if [[ ! -s "${sdk}/lib/libphp.a" || ! -s "${sdk}/lib/libphpx.a" ]]; then
     echo "full-static SDK is not installed at ${sdk}" >&2
     exit 1
 fi
-
-has_flag() {
-    local name="$1"
-    shift
-    local arg
-    for arg in "$@"; do
-        if [[ "${arg}" == "${name}" || "${arg}" == "${name}="* ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
 
 # Input path comes first. tpc treats a bare token after --compiler as a source file,
 # so the compiler command is passed as --compiler=<path>.

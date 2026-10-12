@@ -10,6 +10,13 @@ set -euo pipefail
 # shellcheck source=/usr/local/bin/typephp-ext-mode.sh
 source /usr/local/bin/typephp-ext-mode.sh
 
+if typephp_requests_wasm "$@"; then
+    status=0
+    tpc "$@" || status=$?
+    /usr/local/bin/typephp-chown-output . || true
+    exit "${status}"
+fi
+
 has_flag() {
     local name="$1"
     shift
@@ -37,6 +44,18 @@ php_version_arg() {
     done
     return 1
 }
+
+# Nano does not use a private PHP embed.
+if typephp_requests_nano "$@" || typephp_requests_mobile "$@"; then
+    status=0
+    cmd=(tpc "$@")
+    if [[ -n "${TYPEPHP_JOBS:-}" ]] && ! has_flag --job "$@" && ! has_flag -j "$@"; then
+        cmd+=(--job="${TYPEPHP_JOBS}")
+    fi
+    "${cmd[@]}" || status=$?
+    /usr/local/bin/typephp-chown-output . || true
+    exit "${status}"
+fi
 
 cmd=(tpc "$@")
 if ! has_flag --php-builder "$@"; then

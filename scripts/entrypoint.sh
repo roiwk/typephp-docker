@@ -9,7 +9,7 @@ set -euo pipefail
 source /usr/local/bin/typephp-ext-mode.sh
 
 extension_selection="$(typephp_extension_selection)"
-if [[ "${extension_selection}" != omit && "${extension_selection}" != minimal ]]; then
+if [[ "${extension_selection}" != omit && "${extension_selection}" != minimal ]] && ! typephp_requests_direct_tpc "$@"; then
     TYPEPHP_EXTENSIONS="${extension_selection}" /usr/local/bin/typephp-ext
 fi
 

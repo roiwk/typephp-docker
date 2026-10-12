@@ -3,6 +3,8 @@
 # shared:        dynamic libphp.so
 # static:        full-static SDK when TYPEPHP_EXTENSIONS is unset
 # php-builder:   private PHP, zts off unless TYPEPHP_ZTS is set
+# nano:          VM-free swoole/php-nano sources, no libphp
+# android:       aarch64-linux-android24 shared library via the NDK clang++
 # project:       an existing YAML, keeping its sapi (cli/fpm are not rewritten to embed)
 # laravel/webman: example YAML's php-builder (private static PHP, zts off)
 set -euo pipefail
@@ -19,6 +21,9 @@ usage() {
                         TYPEPHP_EXTENSIONS=redis 时改为把该扩展编进私有 PHP（zts 默认 off）
                         含 sapi: cli/fpm 或 php-builder 的 YAML 请用 project
   php-builder           私有 PHP，zts 默认 off。源文件默认 hello.php
+  nano                  不链接 libphp，编译 swoole/php-nano 源码。源文件默认 hello.php
+  android               Android arm64-v8a 动态库。源文件默认 hello.php，产物同名 .so
+                        iOS（arm64-apple-ios）和 macOS AppKit 要在装了 Xcode 的 Mac 上编译
   project               编译项目里已有的 YAML，默认 project.yml。保留其中的 sapi
   laravel-cli           示例 YAML，产物 build/laravel（artisan）
   laravel-fpm           示例 YAML，产物 build/laravel-fpm
@@ -348,6 +353,48 @@ compile_link() {
     "${ROOT}/scripts/compile-hostpath.sh" "${project}" tpc "${rel}"
 }
 
+compile_android() {
+    if [[ -z "${source}" ]]; then
+        source="hello.php"
+    fi
+    if [[ "${source}" != /* ]]; then
+        source="${project}/${source}"
+    fi
+    if [[ ! -f "${source}" ]]; then
+        echo "找不到 ${source}" >&2
+        exit 2
+    fi
+    local rel="${source#"${project}/"}"
+    unset TYPEPHP_LINK
+    if [[ "${rel}" == *.yml || "${rel}" == *.yaml ]]; then
+        echo "按配置编译 Android/iOS 目标 ${rel}"
+        "${ROOT}/scripts/compile-hostpath.sh" "${project}" tpc "${rel}"
+        return
+    fi
+    local out
+    out="$(basename "${rel}" .php).so"
+    echo "Android arm64-v8a 编译 ${rel} -> ${out}"
+    "${ROOT}/scripts/compile-hostpath.sh" "${project}" tpc "${rel}" \
+        --target-platform aarch64-linux-android24 -m lib -o "${out}"
+}
+
+compile_nano() {
+    if [[ -z "${source}" ]]; then
+        source="hello.php"
+    fi
+    if [[ "${source}" != /* ]]; then
+        source="${project}/${source}"
+    fi
+    if [[ ! -f "${source}" ]]; then
+        echo "找不到 ${source}" >&2
+        exit 2
+    fi
+    local rel="${source#"${project}/"}"
+    unset TYPEPHP_LINK
+    echo "Nano 编译 ${rel}（不链接 libphp）"
+    "${ROOT}/scripts/compile-hostpath.sh" "${project}" tpc --nano "${rel}"
+}
+
 compile_project() {
     local yaml="${source:-project.yml}"
     if [[ "${yaml}" == /* ]]; then
@@ -402,6 +449,12 @@ main() {
     case "${target}" in
         shared|static|php-builder)
             compile_link "${target}"
+            ;;
+        nano)
+            compile_nano
+            ;;
+        android)
+            compile_android
             ;;
         project|yml)
             compile_project

@@ -8,7 +8,7 @@ requested="${1:-latest}"
 php_minor="${TYPEPHP_PHP_MINOR:-8.4}"
 
 python3 - "${root}" "${requested}" "${php_minor}" << 'PY'
-import hashlib, json, os, sys, urllib.request
+import hashlib, json, os, re, sys, urllib.request
 from pathlib import Path
 
 root, requested, php_minor = sys.argv[1:]
@@ -162,6 +162,49 @@ PHPX_SDK_PHP={sdk['php']}
 PHPX_SDK_SHA256_X64={sdk['x64']}
 PHPX_SDK_SHA256_ARM64={sdk['arm64']}
 """
+previous = Path(root, "versions.env").read_text() if Path(root, "versions.env").exists() else ""
+groups = [
+    (
+        "WASI toolchain. Not derived from the TypePHP tag above.",
+        [
+            "TYPEPHP_SOURCE_SHA256",
+            "PHPX_WASI_SDK_VERSION",
+            "PHPX_WASI_SDK_PHP",
+            "PHPX_WASI_SDK_SHA256",
+            "WASI_SDK_VERSION",
+            "WASI_SDK_SHA256_X64",
+            "WASI_SDK_SHA256_ARM64",
+            "WASMTIME_VERSION",
+            "WASMTIME_SHA256_X64",
+            "WASMTIME_SHA256_ARM64",
+        ],
+    ),
+    (
+        "Nano sources. Not derived from the TypePHP tag above.",
+        [
+            "PHP_NANO_VERSION",
+            "PHP_NANO_SHA256",
+        ],
+    ),
+    (
+        "Android toolchain. Not derived from the TypePHP tag above.",
+        [
+            "PHPX_ANDROID_SDK_SHA256",
+            "ANDROID_NDK_VERSION",
+            "ANDROID_NDK_SHA256",
+            "ANDROID_CMDLINE_TOOLS_SHA256",
+        ],
+    ),
+]
+for comment, keys in groups:
+    kept = []
+    for key in keys:
+        match = re.search(rf"(?m)^{key}=(.*)$", previous)
+        if match and match.group(1).strip():
+            kept.append(f"{key}={match.group(1).strip()}")
+    if kept:
+        text += f"\n# {comment}\n"
+        text += "\n".join(kept) + "\n"
 Path(root, "versions.env").write_text(text)
 print(text, end="")
 PY
